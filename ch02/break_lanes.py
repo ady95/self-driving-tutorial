@@ -98,9 +98,7 @@ def evaluate(infos, reference):
     for info, ref in zip(infos, reference):
         for side in ("left", "right"):
             lane, base = info[side], ref[side]
-            if base is None:
-                continue
-            if lane is None:
+            if base is None or lane is None:      # 기준에 없거나, 못 찾았거나
                 continue
             detected += 1
             err = lane_error(lane, base)
