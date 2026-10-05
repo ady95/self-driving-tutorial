@@ -37,3 +37,13 @@ for T in HORIZONS:
     e_ct = np.array([np.hypot(*(np.array(predict_ctrv(i, T)) - [x[i + n], y[i + n]])) for i in idx])
     t = turning[idx]
     print(f"{T:4.1f}초  {np.mean(e_cv):8.2f}m{np.mean(e_ct):10.2f}m{np.mean(e_cv[t]):11.2f}m{np.mean(e_ct[t]):13.2f}m")
+
+# 어디서 틀리는가: 1초 예측 오차를 그 1초 동안의 속도 변화로 나눠 본다
+n = int(1.0 / DT)
+idx = np.arange(0, len(x) - n)
+dv = np.abs(v[idx + n] - v[idx])
+e_ct = np.array([np.hypot(*(np.array(predict_ctrv(i, 1.0)) - [x[i + n], y[i + n]])) for i in idx])
+print("\nCTRV 1초 예측 오차, 그 1초 동안의 속도 변화별")
+for lo, hi in [(0, 0.5), (0.5, 1.5), (1.5, np.inf)]:
+    m = (dv >= lo) & (dv < hi)
+    print(f"  속도 변화 {lo}~{hi} m/s: 시점의 {m.mean():5.1%}, 평균 오차 {e_ct[m].mean():.2f}m")
