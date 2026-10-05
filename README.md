@@ -27,6 +27,7 @@ PyTorch는 GPU 환경에 맞춰 따로 설치합니다. 자세한 방법은 책�
 | `ch03/` | 03장 딥러닝 인지 — YOLO 검출, 주행 가능 영역·차선 분할, 객체 추적 |
 | `ch04/` | 04장 거리와 공간 — 핀홀 카메라, 단안 깊이 추정, LiDAR, 카메라-LiDAR 퓨전 |
 | `ch05/` | 05장 지도와 위치 — IPM·BEV, 점유 격자, 추측 항법·GPS·EKF, Visual Odometry |
+| `ch06/` | 06장 판단과 제어 — 궤적 예측, Dijkstra·A*·RRT, PID·Pure Pursuit·MPC, 차선 유지 |
 | `scripts/` | 샘플 데이터 다운로드 등 공통 도구 |
 | `data/` | 내려받은 샘플 데이터 (git에 포함하지 않음) |
 | `outputs/` | 실습 결과물 (git에 포함하지 않음) |
