@@ -28,6 +28,7 @@ PyTorch는 GPU 환경에 맞춰 따로 설치합니다. 자세한 방법은 책�
 | `ch04/` | 04장 거리와 공간 — 핀홀 카메라, 단안 깊이 추정, LiDAR, 카메라-LiDAR 퓨전 |
 | `ch05/` | 05장 지도와 위치 — IPM·BEV, 점유 격자, 추측 항법·GPS·EKF, Visual Odometry |
 | `ch06/` | 06장 판단과 제어 — 궤적 예측, Dijkstra·A*·RRT, PID·Pure Pursuit·MPC, 차선 유지 |
+| `ch07/` | 07장 CARLA — 접속·속도 측정, 차량·센서 다루기, 실시간 인지 연결, Modular Driving Agent v1 |
 | `scripts/` | 샘플 데이터 다운로드 등 공통 도구 |
 | `data/` | 내려받은 샘플 데이터 (git에 포함하지 않음) |
 | `outputs/` | 실습 결과물 (git에 포함하지 않음) |
