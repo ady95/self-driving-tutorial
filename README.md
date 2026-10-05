@@ -26,6 +26,7 @@ PyTorch는 GPU 환경에 맞춰 따로 설치합니다. 자세한 방법은 책�
 | `ch02/` | 02장 Classical Vision — 영상 처리 기초, OpenCV 차선 인식, 실패시켜 보기 |
 | `ch03/` | 03장 딥러닝 인지 — YOLO 검출, 주행 가능 영역·차선 분할, 객체 추적 |
 | `ch04/` | 04장 거리와 공간 — 핀홀 카메라, 단안 깊이 추정, LiDAR, 카메라-LiDAR 퓨전 |
+| `ch05/` | 05장 지도와 위치 — IPM·BEV, 점유 격자, 추측 항법·GPS·EKF, Visual Odometry |
 | `scripts/` | 샘플 데이터 다운로드 등 공통 도구 |
 | `data/` | 내려받은 샘플 데이터 (git에 포함하지 않음) |
 | `outputs/` | 실습 결과물 (git에 포함하지 않음) |
@@ -35,4 +36,4 @@ PyTorch는 GPU 환경에 맞춰 따로 설치합니다. 자세한 방법은 책�
 ## 데이터 출처
 
 - 샘플 주행 영상: [Udacity CarND-LaneLines-P1](https://github.com/udacity/CarND-LaneLines-P1) (MIT License)
-- CARLA 도심 주행 데이터: `scripts/record_carla_urban.py`로 생성, [CARLA Simulator](https://carla.org) 에셋 CC-BY 4.0
+- CARLA 데이터: `scripts/record_carla_urban.py`(도심 장면), `scripts/record_carla_drive.py`(장거리 주행)로 생성, [CARLA Simulator](https://carla.org) 에셋 CC-BY 4.0

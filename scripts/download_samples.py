@@ -1,7 +1,7 @@
 """실습용 샘플 데이터를 data/ 에 내려받습니다.
 
 python scripts/download_samples.py           # 고속도로 주행 영상 3개 (01~02장)
-python scripts/download_samples.py --carla   # + CARLA 도심 주행 데이터 약 100MB (03장~)
+python scripts/download_samples.py --carla   # + CARLA 데이터 약 160MB (도심 장면 03장~, 장거리 주행 05장~)
 
 영상 출처: Udacity CarND-LaneLines-P1 (MIT License)
 https://github.com/udacity/CarND-LaneLines-P1
@@ -31,14 +31,16 @@ for name in VIDEOS:
 print(f"저장 위치: {out_dir}")
 
 if "--carla" in sys.argv:
-    if (data / "carla_urban" / "calib.json").exists():
-        print("[skip] carla_urban (이미 있음)")
-    else:
-        zip_path = data / "carla_urban.zip"
-        print("[down] carla_urban.zip (약 100MB) ...", end=" ", flush=True)
-        urllib.request.urlretrieve(CARLA_URL, zip_path)
+    for name, check, size in [("carla_urban", "calib.json", "약 100MB"),     # 03~05장
+                              ("carla_drive", "ego.csv", "약 60MB")]:        # 05장, 08장
+        if (data / name / check).exists():
+            print(f"[skip] {name} (이미 있음)")
+            continue
+        zip_path = data / f"{name}.zip"
+        print(f"[down] {name}.zip ({size}) ...", end=" ", flush=True)
+        urllib.request.urlretrieve(CARLA_URL.replace("carla_urban", name), zip_path)
         print(f"{zip_path.stat().st_size / 1e6:.1f} MB")
         with zipfile.ZipFile(zip_path) as z:
             z.extractall(data)
         zip_path.unlink()
-    print(f"저장 위치: {data / 'carla_urban'}")
+    print(f"저장 위치: {data}")
