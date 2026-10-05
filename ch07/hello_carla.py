@@ -1,7 +1,7 @@
 """07-1: CARLA 서버에 접속해 기본 정보를 확인하고, 동기 모드에서 카메라 한 대의 속도를 잽니다.
 
 python ch07/hello_carla.py                    # 같은 PC의 CARLA 서버 (localhost:2000)
-python ch07/hello_carla.py 192.168.0.10       # 다른 PC의 CARLA 서버
+python ch07/hello_carla.py <서버 주소>         # 다른 PC의 CARLA 서버
 """
 import queue
 import sys
