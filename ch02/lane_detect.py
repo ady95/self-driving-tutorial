@@ -41,7 +41,10 @@ def region_of_interest(edges, vertices):
 
 def detect_segments(masked):
     lines = cv2.HoughLinesP(masked, **HOUGH)
-    return [] if lines is None else [tuple(l[0]) for l in lines]
+    if lines is None:
+        return []
+    # OpenCV 4.x는 (N, 1, 4), 5.0은 (N, 4) 모양으로 돌려준다 → 둘 다 (N, 4)로 맞춘다
+    return [tuple(int(v) for v in l) for l in lines.reshape(-1, 4)]
 
 
 def split_left_right(segments, width):
