@@ -1,0 +1,5 @@
+# 『자율주행 따라하기』 공통 패키지
+# PyTorch는 GPU 환경에 맞춰 따로 설치합니다 (01-3 참고).
+numpy
+opencv-python
+matplotlib
