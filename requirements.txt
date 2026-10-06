@@ -3,3 +3,4 @@
 numpy
 opencv-python
 matplotlib
+openai              # 09장 VLM (Ollama·OpenAI API 공통)
