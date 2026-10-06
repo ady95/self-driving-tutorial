@@ -149,8 +149,10 @@ def main(args):
     inv.listen(lambda e: invasions.append((e.frame, [str(m.type) for m in e.crossed_lane_markings])))
 
     tag = f"r{args.route}_{args.weather}" + ("" if args.curve_limit else "_nocurve")
+    if (args.npc, args.walkers, args.seed) != (40, 30, 0):              # 기본 조건이 아니면 파일 이름에 표시
+        tag += f"_n{args.npc}w{args.walkers}s{args.seed}"
     writer = cv2.VideoWriter(str(OUT / f"agent_v1_{tag}_raw.mp4"),
-                             cv2.VideoWriter_fourcc(*"mp4v"), FPS, (960, 540))
+                             cv2.VideoWriter_fourcc(*"mp4v"), FPS, (960, 540)) if args.video else None
     pi, idx, step, state = SpeedPI(), 0, 0, "CRUISE"
     states, lat_err, speeds, red_run, loop_ms, log, line_pos = {}, [], [], set(), [], [], {}
     max_steps = int(route_len / 2.0 / DT)                    # 평균 2m/s도 못 내면 시간 초과
@@ -239,6 +241,8 @@ def main(args):
                         round(lat_err[-1], 2), round(min(dist, 99), 1), str(light).split(".")[-1]))
 
             # 영상: 추적 카메라 + 상태 + 미니 BEV
+            if writer is None:
+                continue
             img = np.frombuffer(data["chase"].raw_data, np.uint8).reshape(540, 960, 4)[:, :, :3].copy()
             bev = np.zeros((200, 160, 3), np.uint8)
             for p, color in [(ahead, (0, 200, 0)), (hit_pts, (0, 0, 255))]:
@@ -254,7 +258,8 @@ def main(args):
                         (0, 255, 255), 2)
             writer.write(img)
     finally:
-        writer.release()
+        if writer is not None:
+            writer.release()
         for sen in list(sensors.values()) + [col, inv]:
             sen.stop()
         for c in ctrls:
@@ -280,6 +285,11 @@ def main(args):
     print(f"경로 이탈: 평균 {np.mean(lat_err):.2f}m, 최대 {np.max(lat_err):.2f}m")
     print("상태 비율: " + ", ".join(f"{k} {v / step:.0%}" for k, v in sorted(states.items(), key=lambda x: -x[1])))
     print(f"루프 처리 시간 중앙값 {np.median(loop_ms):.0f}ms (CARLA tick 포함)")
+    return {"result": result, "time_s": round(step * DT, 1), "route_m": round(route_len),
+            "progress": round(min(1.0, idx / (len(route) - 1)), 3), "avg_kmh": round(float(np.mean(speeds)) * 3.6, 1),
+            "collisions": [t for _, t in events], "solid": solid, "red_run": len(red_run),
+            "lat_mean": round(float(np.mean(lat_err)), 2), "lat_max": round(float(np.max(lat_err)), 2),
+            "states": {k: round(v / step, 3) for k, v in states.items()}}
 
 
 if __name__ == "__main__":
@@ -293,4 +303,5 @@ if __name__ == "__main__":
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--no-curve-limit", dest="curve_limit", action="store_false",
                     help="커브 속도 제한 끄기 (비교용)")
+    ap.add_argument("--no-video", dest="video", action="store_false", help="영상 저장 끄기 (반복 평가용)")
     main(ap.parse_args())

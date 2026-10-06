@@ -31,6 +31,7 @@ PyTorch는 GPU 환경에 맞춰 따로 설치합니다. 자세한 방법은 책�
 | `ch07/` | 07장 CARLA — 접속·속도 측정, 차량·센서 다루기, 실시간 인지 연결, Modular Driving Agent v1 |
 | `ch08/` | 08장 End-to-End — CARLA 주행 데이터 수집(카메라 3대), Behavioral Cloning(조향), Transformer 궤적 예측, 개입 횟수 주행 평가 |
 | `ch09/` | 09장 VLM·VLA — Ollama·OpenAI API로 주행 장면 질의응답, CARLA 정답으로 VLM 채점(환각·지연), 행동 토큰, 자전거 모델 World Model |
+| `ch10/` | 10장 평가 — Driving Score로 Agent v1을 날씨·교통량·seed별 반복 평가 |
 | `scripts/` | 샘플 데이터 다운로드 등 공통 도구 |
 | `data/` | 내려받은 샘플 데이터 (git에 포함하지 않음) |
 | `outputs/` | 실습 결과물 (git에 포함하지 않음) |
