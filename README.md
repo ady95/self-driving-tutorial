@@ -43,3 +43,9 @@ PyTorch는 GPU 환경에 맞춰 따로 설치합니다. 자세한 방법은 책�
 
 - 샘플 주행 영상: [Udacity CarND-LaneLines-P1](https://github.com/udacity/CarND-LaneLines-P1) (MIT License)
 - CARLA 데이터: `scripts/record_carla_urban.py`(도심 장면), `scripts/record_carla_drive.py`(장거리 주행)로 생성, [CARLA Simulator](https://carla.org) 에셋 CC-BY 4.0
+
+## 라이선스
+
+이 저장소의 예제 코드는 [Apache License 2.0](LICENSE)으로 배포합니다. 라이선스 사본과 저작권·출처 고지를 유지하고, 수정한 파일에는 바뀐 사실을 표시하면 개인·상업 목적으로 자유롭게 사용·수정·재배포할 수 있습니다.
+
+예제가 내려받거나 불러 쓰는 데이터, 외부 패키지, 사전학습 모델은 각자의 라이선스를 따릅니다. 위 데이터 출처와 함께, 예를 들어 Ultralytics YOLO 패키지와 모델은 AGPL-3.0, CARLA 코드는 MIT, CARLA 에셋은 CC-BY 4.0입니다. 예제를 제품에 쓰려면 함께 쓰는 패키지와 모델의 라이선스도 확인하세요.
