@@ -52,7 +52,11 @@ def read_light(img, rois):
 
 
 class LightFilter:
-    """프레임마다 흔들리는 판독을 안정시킨다: 같은 상태가 n번 연속 나와야 바꾼다. 안 보이면 잠시 유지."""
+    """프레임마다 흔들리는 판독을 안정시킨다.
+    - 유효한 판독끼리 같은 상태가 n번 이어지면 바꾼다. 판독이 없는 프레임(None)은 건너뛰고 세지 않는다
+      (예: RED, None, RED, None, RED도 RED 3번으로 본다)
+    - 아직 상태가 없을 때(처음, 또는 hold 프레임 넘게 못 본 뒤)는 첫 판독을 바로 받는다
+    - 판독이 없으면 hold 프레임(1초) 동안은 직전 상태를 유지한다"""
 
     def __init__(self, n=3, hold=20):
         self.n, self.hold = n, hold

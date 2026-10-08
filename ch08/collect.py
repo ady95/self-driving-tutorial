@@ -7,12 +7,15 @@ Traffic Manager의 자동 주행을 '운전 선생님'으로 삼아, 카메라 �
 
 python ch08/collect.py --town Town03 --minutes 10 --tm-port 8300
 결과: data/e2e/Town03/{center,left,right}/NNNNN.jpg, data/e2e/Town03/labels.csv
+라벨은 프레임마다 바로 기록하므로 중간에 멈춰도 그때까지의 영상과 라벨이 짝을 이뤄 남습니다.
+이미 데이터가 있는 도시는 덮어쓰지 않습니다 (--overwrite로 지우고 다시 모으거나 --out을 바꾸세요).
 """
 import argparse
 import csv
 import math
 import queue
 import random
+import shutil
 from pathlib import Path
 
 import carla
@@ -25,6 +28,10 @@ CAMS = {"center": 0.0, "left": -0.8, "right": 0.8}          # 차량 중심 기�
 
 def main(args):
     out = Path(args.out) / args.town
+    if (out / "labels.csv").exists() or any(out.glob("*/*.jpg")):
+        if not args.overwrite:                                       # 이어서 쓰면 프레임 번호가 겹쳐 영상과 라벨이 섞인다
+            raise SystemExit(f"{out}에 이미 데이터가 있습니다. 다른 --out 폴더를 쓰거나 --overwrite로 지우고 다시 모으세요")
+        shutil.rmtree(out)
     for name in CAMS:
         (out / name).mkdir(parents=True, exist_ok=True)
     client = carla.Client(args.host, 2000)
@@ -63,6 +70,9 @@ def main(args):
 
     rows, stuck = [], 0
     n_frames = int(args.minutes * 60 * FPS)
+    label_file = open(out / "labels.csv", "w", newline="")          # 라벨은 프레임마다 바로 쓴다 (중단돼도 남도록)
+    writer = csv.writer(label_file)
+    writer.writerow(["frame", "steer", "throttle", "brake", "speed", "x", "y", "yaw"])
     try:
         for i in range(60 + n_frames):
             fid = world.tick()
@@ -83,11 +93,18 @@ def main(args):
                 stuck = 0
             for name, img in imgs.items():
                 cv2.imwrite(str(out / name / f"{k:05d}.jpg"), img, [cv2.IMWRITE_JPEG_QUALITY, 90])
-            rows.append([k, round(c.steer, 4), round(c.throttle, 3), round(c.brake, 3), round(speed, 3),
-                         round(tf.location.x, 3), round(tf.location.y, 3), round(tf.rotation.yaw, 3)])
+            row = [k, round(c.steer, 4), round(c.throttle, 3), round(c.brake, 3), round(speed, 3),
+                   round(tf.location.x, 3), round(tf.location.y, 3), round(tf.rotation.yaw, 3)]
+            writer.writerow(row)                                     # 영상 3장을 저장한 뒤에 라벨을 쓴다
+            rows.append(row)
+            if k % FPS == 0:
+                label_file.flush()                                   # 1초마다 디스크에 반영
             if k % 2400 == 0:
                 print(f"{args.town}: {k}/{n_frames}", flush=True)
     finally:
+        label_file.close()
+        if len(rows) < n_frames:
+            print(f"{args.town}: 중단됨 — {len(rows)}프레임까지의 영상과 라벨이 {out}에 남아 있습니다", flush=True)
         for sen in sensors.values():
             sen.stop()
         client.apply_batch([carla.command.DestroyActor(a) for a in list(sensors.values()) + npcs + [ego]])
@@ -95,10 +112,6 @@ def main(args):
         world.apply_settings(s)
         tm.set_synchronous_mode(False)
 
-    with open(out / "labels.csv", "w", newline="") as f:
-        w = csv.writer(f)
-        w.writerow(["frame", "steer", "throttle", "brake", "speed", "x", "y", "yaw"])
-        w.writerows(rows)
     steer = np.array([r[1] for r in rows])
     print(f"{args.town}: {len(rows)} 프레임, 조향 |값| 평균 {np.abs(steer).mean():.3f}, "
           f"|조향|>0.1 비율 {np.mean(np.abs(steer) > 0.1):.1%}")
@@ -114,4 +127,5 @@ if __name__ == "__main__":
     ap.add_argument("--npc", type=int, default=30)
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--out", default="data/e2e")
+    ap.add_argument("--overwrite", action="store_true", help="같은 도시의 기존 데이터를 지우고 다시 모은다")
     main(ap.parse_args())

@@ -1,14 +1,19 @@
 """10-3: 07-4의 Modular Driving Agent v1을 날씨·시간대·교통량을 바꿔 가며 평가하고 Driving Score를 매깁니다.
 
-Driving Score (CARLA Leaderboard 방식) = Route Completion x Infraction Penalty
-  - Route Completion : 경로를 몇 %나 갔는가 (0~1)
-  - Infraction Penalty: 위반마다 계수를 곱한다 (1에서 시작)
+이 책의 Driving Score = Route Completion x Infraction Penalty (0~1)
+  CARLA Leaderboard 2.0의 '위반 계수 곱' 방식을 단순화한 책 자체 점수입니다.
+  - Route Completion : 경로를 몇 %나 갔는가 (0~1, 도착하면 1)
+  - Infraction Penalty: 위반마다 계수를 곱한다 (1에서 시작). Leaderboard 2.0과 같은 계수:
       보행자 충돌 0.50, 차량 충돌 0.60, 정적 물체 충돌 0.65, 빨간불 통과 0.70
-  - 실선 침범은 Leaderboard에서는 감점하지 않으므로 따로 센다
+  - 정지 표지, 도로 밖 주행, 최소 속도 미달 등 Leaderboard의 다른 항목은 세지 않는다
+  - 공식 점수는 0~100이고, 현행 Leaderboard 2.1은 벌점 식과 계수가 달라 직접 비교할 수 없다
+  - 실선 침범은 따로 센다
 
 python ch10/evaluate.py                       # 경로 2 x 날씨 3 x 교통량 3 = 18회 (약 1시간)
 python ch10/evaluate.py --routes 1 --weathers clear --traffic normal --seeds 0 1 2    # 같은 조건 반복
-결과: outputs/ch10/eval_<이름>.csv
+python ch10/evaluate.py --resume              # 중간에 멈췄다면 끝난 조건은 건너뛰고 이어서
+결과: outputs/ch10/eval_<이름>.csv, 실행마다 상태 로그 outputs/ch10/log_<이름>_<번호>_<조건>.csv
+같은 --name의 결과가 이미 있으면 덮어쓰지 않습니다 (--resume으로 이어 가거나 --name을 바꾸세요).
 """
 import argparse
 import csv
@@ -33,6 +38,21 @@ def driving_score(r):
     return rc * ip, ip
 
 
+def load_rows(path, resume):
+    """이어서 할 때 이미 끝난 회차를 불러온다. 이어서 하지 않는데 결과가 있으면 덮어쓰지 않고 멈춘다."""
+    if not path.exists():
+        return []
+    if not resume:
+        raise SystemExit(f"{path}가 이미 있습니다. --resume으로 이어 가거나 --name을 바꾸세요 (원본 로그 보호)")
+    rows = list(csv.DictReader(open(path, encoding="utf-8")))
+    for r in rows:                                              # CSV는 글자로 읽히므로 숫자로 되돌린다
+        for k, v in r.items():
+            if k not in ("weather", "traffic", "result", "collision_with", "scenario", "mode", "collisions"):
+                r[k] = None if v == "" else (int(v) if v.lstrip("-").isdigit() else float(v))
+    print(f"{path}: {len(rows)}회가 이미 끝남 → 나머지만 실행")
+    return rows
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--host", default="localhost")
@@ -42,13 +62,17 @@ if __name__ == "__main__":
     ap.add_argument("--traffic", nargs="+", default=["light", "normal", "heavy"])
     ap.add_argument("--seeds", type=int, nargs="+", default=[0])
     ap.add_argument("--name", default="matrix")
+    ap.add_argument("--resume", action="store_true", help="같은 --name의 결과에서 끝난 조건은 건너뛴다")
     args = ap.parse_args()
     OUT.mkdir(parents=True, exist_ok=True)
-    rows = []
+    rows = load_rows(OUT / f"eval_{args.name}.csv", args.resume)
+    done = {(r["route"], r["weather"], r["traffic"], r["seed"]) for r in rows}
     for route in args.routes:
         for weather in args.weathers:
             for traffic in args.traffic:
                 for seed in args.seeds:
+                    if (route, weather, traffic, seed) in done:
+                        continue
                     npc, walkers = TRAFFIC[traffic]
                     run = argparse.Namespace(host=args.host, tm_port=args.tm_port, route=route, weather=weather,
                                              npc=npc, walkers=walkers, seed=seed, curve_limit=True, video=False)
@@ -67,7 +91,7 @@ if __name__ == "__main__":
                                  "lat_max": r["lat_max"], "penalty": round(ip, 3), "driving_score": round(ds, 3),
                                  "emergency": r["states"].get("EMERGENCY", 0), "wall_s": round(time.perf_counter() - start)})
                     print(f"→ Driving Score {ds:.3f} (완주 {r['progress']:.0%} x 감점 {ip:.2f})", flush=True)
-                    with open(OUT / f"eval_{args.name}.csv", "w", newline="") as f:          # 한 번 돌 때마다 저장
+                    with open(OUT / f"eval_{args.name}.csv", "w", newline="", encoding="utf-8") as f:   # 한 번 돌 때마다 저장
                         w = csv.DictWriter(f, fieldnames=list(rows[0]))
                         w.writeheader()
                         w.writerows(rows)

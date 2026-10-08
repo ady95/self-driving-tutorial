@@ -7,7 +7,9 @@
 
 python ch11/evaluate_v2.py --tm-port 8300                 # 30회, 약 2시간
 python ch11/evaluate_v2.py --only scenarios --weathers clear
-결과: outputs/ch11/eval_<이름>.csv
+python ch11/evaluate_v2.py --resume           # 중간에 멈췄다면 끝난 조건은 건너뛰고 이어서
+결과: outputs/ch11/eval_<이름>.csv, 주행마다 로그·결과 outputs/ch11/agent_v2_<조건>_<이름>_*
+같은 --name의 결과가 이미 있으면 덮어쓰지 않습니다 (--resume으로 이어 가거나 --name을 바꾸세요).
 """
 import argparse
 import csv
@@ -18,7 +20,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "ch10"))
 import agent_v2  # noqa: E402
-from evaluate import driving_score  # noqa: E402
+from evaluate import driving_score, load_rows  # noqa: E402
 
 OUT = Path("outputs/ch11")
 BASE = [(0, "none"), (1, "none")]
@@ -31,19 +33,23 @@ if __name__ == "__main__":
     ap.add_argument("--weathers", nargs="+", default=["clear", "night", "rain"])
     ap.add_argument("--modes", nargs="+", default=["v1", "v2"])
     ap.add_argument("--name", default="v1_vs_v2")
+    ap.add_argument("--resume", action="store_true", help="같은 --name의 결과에서 끝난 조건은 건너뛴다")
     args = ap.parse_args()
     OUT.mkdir(parents=True, exist_ok=True)
     jobs = (BASE if args.only != "scenarios" else []) + (SCENARIOS if args.only != "base" else [])
-    rows = []
+    rows = load_rows(OUT / f"eval_{args.name}.csv", args.resume)
+    done = {(r["mode"], r["route"], r["scenario"], r["weather"]) for r in rows}
     for route, scenario in jobs:
         for weather in args.weathers:
             for mode in args.modes:
+                if (mode, route, scenario, weather) in done:
+                    continue
                 print(f"\n=== {mode}, 경로 {route}, {weather}, 상황 {scenario}", flush=True)
                 start = time.perf_counter()
                 traffic = [] if scenario == "none" else ["--npc", "0", "--walkers", "0"]
                 r = agent_v2.main(agent_v2.get_args(["--tm-port", str(args.tm_port), "--route", str(route),
-                                                     "--weather", weather, "--scenario", scenario, "--mode", mode]
-                                                    + traffic))
+                                                     "--weather", weather, "--scenario", scenario, "--mode", mode,
+                                                     "--tag", f"_{args.name}"] + traffic))   # 로그 이름에 평가 이름을 붙인다
                 ds, ip = driving_score(r)
                 rows.append({"mode": mode, "route": route, "scenario": scenario, "weather": weather,
                              "result": r["result"], "time_s": r["time_s"], "progress": r["progress"],

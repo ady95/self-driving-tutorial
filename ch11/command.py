@@ -7,6 +7,7 @@ python ch11/command.py --backend openai --api responses
 """
 import argparse
 import json
+import math
 import re
 import sys
 from pathlib import Path
@@ -35,6 +36,32 @@ EXAMPLES = [
 ]
 
 
+def clamp(got):
+    """LLM이 낸 값을 허용 범위 안의 유한한 숫자로. 숫자가 아니거나 NaN·무한대면 기본값으로 되돌린다."""
+    params, notes = dict(DEFAULT), []
+    if not isinstance(got, dict):                       # JSON 객체가 아니면 전부 기본값
+        return params, ["JSON 객체가 아님 → 모두 기본값"] if got else []
+    for k, (lo, hi) in LIMITS.items():
+        if k not in got:
+            continue
+        v = got[k]
+        try:
+            v = float(v) if not isinstance(v, bool) else None   # true/false는 숫자로 받지 않는다
+        except (TypeError, ValueError):
+            v = None
+        if v is None or not math.isfinite(v):                    # "abc", "NaN", Infinity 등
+            notes.append(f"{k} {got[k]!r} → 기본값 {DEFAULT[k]:g} (유한한 숫자가 아님)")
+            continue
+        clipped = min(max(v, lo), hi)
+        if clipped != v:
+            notes.append(f"{k} {v:g} → {clipped:g} (허용 범위 {lo:g}~{hi:g})")
+        params[k] = clipped
+    if isinstance(got.get("allow_bypass"), bool):
+        params["allow_bypass"] = got["allow_bypass"]
+    assert all(math.isfinite(params[k]) and LIMITS[k][0] <= params[k] <= LIMITS[k][1] for k in LIMITS)
+    return params, notes
+
+
 def parse_command(text, client, model, api="chat"):
     """명령 → (매개변수, 바뀐 항목 설명, 대답, LLM 원문)."""
     if api == "responses":
@@ -49,19 +76,9 @@ def parse_command(text, client, model, api="chat"):
         got = json.loads(m.group(0)) if m else {}
     except json.JSONDecodeError:
         got = {}
-    params, notes = dict(DEFAULT), []
-    for k, (lo, hi) in LIMITS.items():
-        try:
-            v = float(got.get(k, DEFAULT[k]))
-        except (TypeError, ValueError):
-            continue
-        clipped = min(max(v, lo), hi)
-        if clipped != v:
-            notes.append(f"{k} {v:g} → {clipped:g} (허용 범위 {lo:g}~{hi:g})")
-        params[k] = clipped
-    if isinstance(got.get("allow_bypass"), bool):
-        params["allow_bypass"] = got["allow_bypass"]
-    return params, notes, got.get("reply", ""), raw
+    params, notes = clamp(got)
+    reply = got.get("reply", "") if isinstance(got, dict) else ""
+    return params, notes, reply, raw
 
 
 if __name__ == "__main__":

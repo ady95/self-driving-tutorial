@@ -5,6 +5,7 @@
 예측한 궤적은 Pure Pursuit(06-3)로 따라가 조향으로 바꿉니다(steer_from_waypoints).
 
 python ch08/train_traj.py
+python ch08/train_traj.py --resume    # 중간에 멈췄다면 이어서
 """
 import argparse
 import csv
@@ -19,7 +20,7 @@ import torch.nn as nn
 from torch.utils.data import DataLoader, Dataset
 from torchvision.models import ResNet18_Weights, resnet18
 
-from train_bc import ROOT, TOWNS, to_tensor
+from train_bc import ROOT, TOWNS, resume, save_checkpoint, to_tensor
 
 OUT = Path("outputs/ch08")
 HORIZON = [10, 20, 30, 40]                       # 0.5·1.0·1.5·2.0초 뒤 (20 FPS)
@@ -106,6 +107,7 @@ def steer_from_waypoints(wps, speed):
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--epochs", type=int, default=8)
+    ap.add_argument("--resume", action="store_true", help="에폭마다 저장한 체크포인트에서 이어서 학습")
     args = ap.parse_args()
     torch.manual_seed(0)
     device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -118,8 +120,9 @@ if __name__ == "__main__":
     print(f"파라미터 {sum(p.numel() for p in model.parameters()) / 1e6:.1f}M")
     opt = torch.optim.AdamW(model.parameters(), lr=3e-4, weight_decay=1e-4)
     sched = torch.optim.lr_scheduler.CosineAnnealingLR(opt, args.epochs)
+    first = resume(OUT / "traj_ckpt.pt", model, opt, sched) if args.resume else 1
     start = time.perf_counter()
-    for epoch in range(1, args.epochs + 1):
+    for epoch in range(first, args.epochs + 1):
         model.train()
         total = 0.0
         for img, sp, wps in tl:
@@ -138,5 +141,6 @@ if __name__ == "__main__":
         print(f"epoch {epoch}  train L1 {total / len(train):.3f}  검증 오차 0.5/1.0/1.5/2.0초: "
               + " / ".join(f"{v:.2f}m" for v in e.mean(0).tolist())
               + f"  {time.perf_counter() - start:.0f}s", flush=True)
+        save_checkpoint(OUT / "traj_ckpt.pt", model, opt, sched, epoch)
     torch.save(model.state_dict(), OUT / "traj.pt")
     print(f"저장: {OUT / 'traj.pt'}")
