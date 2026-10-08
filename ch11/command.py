@@ -36,6 +36,15 @@ EXAMPLES = [
 ]
 
 
+def show(x):
+    """기록용 짧은 표시. 아주 큰 정수는 글자로 바꾸는 것조차 실패하므로 크기만 적는다."""
+    try:
+        s = repr(x)
+    except ValueError:
+        return f"<{x.bit_length()}비트 정수>"
+    return s if len(s) <= 40 else s[:37] + "..."
+
+
 def clamp(got):
     """LLM이 낸 값을 허용 범위 안의 유한한 숫자로. 숫자가 아니거나 NaN·무한대면 기본값으로 되돌린다."""
     params, notes = dict(DEFAULT), []
@@ -47,10 +56,10 @@ def clamp(got):
         v = got[k]
         try:
             v = float(v) if not isinstance(v, bool) else None   # true/false는 숫자로 받지 않는다
-        except (TypeError, ValueError):
+        except (TypeError, ValueError, OverflowError):            # 글자·목록, float로 못 바꾸는 큰 정수
             v = None
         if v is None or not math.isfinite(v):                    # "abc", "NaN", Infinity 등
-            notes.append(f"{k} {got[k]!r} → 기본값 {DEFAULT[k]:g} (유한한 숫자가 아님)")
+            notes.append(f"{k} {show(got[k])} → 기본값 {DEFAULT[k]:g} (유한한 숫자가 아님)")
             continue
         clipped = min(max(v, lo), hi)
         if clipped != v:
@@ -74,7 +83,7 @@ def parse_command(text, client, model, api="chat"):
     m = re.search(r"\{.*\}", raw or "", re.S)
     try:
         got = json.loads(m.group(0)) if m else {}
-    except json.JSONDecodeError:
+    except ValueError:                                  # 깨진 JSON, 너무 긴 정수(파이썬의 정수 자릿수 제한)
         got = {}
     params, notes = clamp(got)
     reply = got.get("reply", "") if isinstance(got, dict) else ""

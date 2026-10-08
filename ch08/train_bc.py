@@ -65,7 +65,8 @@ def load_items(side, val_ratio=0.1):
 def save_checkpoint(path, model, opt, sched, epoch):
     """에폭이 끝날 때마다 이어서 학습하는 데 필요한 것을 모두 저장한다."""
     torch.save({"epoch": epoch, "total": sched.T_max, "model": model.state_dict(), "opt": opt.state_dict(),
-                "sched": sched.state_dict(), "rng": torch.get_rng_state()}, path)
+                "sched": sched.state_dict(), "rng": torch.get_rng_state(),              # CPU 난수(데이터 섞기)
+                "cuda_rng": torch.cuda.get_rng_state_all() if torch.cuda.is_available() else None}, path)  # GPU 난수(Dropout)
 
 
 def resume(path, model, opt, sched):
@@ -80,6 +81,8 @@ def resume(path, model, opt, sched):
     opt.load_state_dict(ck["opt"])
     sched.load_state_dict(ck["sched"])
     torch.set_rng_state(ck["rng"])
+    if ck.get("cuda_rng") is not None and torch.cuda.is_available() and len(ck["cuda_rng"]) == torch.cuda.device_count():
+        torch.cuda.set_rng_state_all(ck["cuda_rng"])           # GPU 구성이 같을 때만 GPU 난수도 되돌린다
     print(f"체크포인트 {path}: {ck['epoch']}에폭까지 학습됨 → {ck['epoch'] + 1}에폭부터 이어서")
     return ck["epoch"] + 1
 

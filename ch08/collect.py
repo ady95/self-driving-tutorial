@@ -7,7 +7,8 @@ Traffic Manager의 자동 주행을 '운전 선생님'으로 삼아, 카메라 �
 
 python ch08/collect.py --town Town03 --minutes 10 --tm-port 8300
 결과: data/e2e/Town03/{center,left,right}/NNNNN.jpg, data/e2e/Town03/labels.csv
-라벨은 프레임마다 바로 기록하므로 중간에 멈춰도 그때까지의 영상과 라벨이 짝을 이뤄 남습니다.
+라벨은 영상 3장이 모두 저장된 프레임만 바로 기록하므로 중간에 멈춰도 그때까지의 영상과 라벨이 짝을 이뤄 남습니다.
+(저장에 실패하면 수집을 멈추고, 라벨 없이 남은 그 프레임의 영상은 지웁니다.)
 이미 데이터가 있는 도시는 덮어쓰지 않습니다 (--overwrite로 지우고 다시 모으거나 --out을 바꾸세요).
 """
 import argparse
@@ -91,18 +92,22 @@ def main(args):
             if stuck > 200:                                          # 10초 넘게 갇히면 다른 곳으로 옮긴다
                 ego.set_transform(rng.choice(spawns))
                 stuck = 0
-            for name, img in imgs.items():
-                cv2.imwrite(str(out / name / f"{k:05d}.jpg"), img, [cv2.IMWRITE_JPEG_QUALITY, 90])
+            saved = [cv2.imwrite(str(out / name / f"{k:05d}.jpg"), img, [cv2.IMWRITE_JPEG_QUALITY, 90])
+                     for name, img in imgs.items()]
+            if not all(saved):                                       # 디스크가 꽉 찼거나 쓰기 권한이 없으면 False
+                raise SystemExit(f"{out}의 {k:05d}.jpg 저장 실패 — 디스크 공간과 쓰기 권한을 확인하세요")
             row = [k, round(c.steer, 4), round(c.throttle, 3), round(c.brake, 3), round(speed, 3),
                    round(tf.location.x, 3), round(tf.location.y, 3), round(tf.rotation.yaw, 3)]
+            rows.append(row)                                         # 먼저 세어 두어야 정리 단계가 이 프레임 영상을 지우지 않는다
             writer.writerow(row)                                     # 영상 3장을 저장한 뒤에 라벨을 쓴다
-            rows.append(row)
             if k % FPS == 0:
                 label_file.flush()                                   # 1초마다 디스크에 반영
             if k % 2400 == 0:
                 print(f"{args.town}: {k}/{n_frames}", flush=True)
     finally:
         label_file.close()
+        for name in CAMS:                                            # 라벨을 쓰기 전에 멈춘 프레임의 영상은 지운다
+            (out / name / f"{len(rows):05d}.jpg").unlink(missing_ok=True)
         if len(rows) < n_frames:
             print(f"{args.town}: 중단됨 — {len(rows)}프레임까지의 영상과 라벨이 {out}에 남아 있습니다", flush=True)
         for sen in sensors.values():
