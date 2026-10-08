@@ -3,8 +3,10 @@
 RT-2·OpenVLA 같은 VLA는 연속적인 행동 값을 구간(bin)으로 나눠 토큰 번호로 바꾼 뒤,
 언어 모델이 단어를 생성하듯 그 번호를 생성합니다.
 
-python ch09/action_tokens.py          # 08-2에서 모은 data/e2e/Town03 필요
+python ch09/action_tokens.py                         # 08-2에서 직접 모은 data/e2e/Town03
+python ch09/action_tokens.py --data data/e2e_ref     # 책의 표를 낸 기준 라벨 (download_samples.py --e2e-ref)
 """
+import argparse
 import csv
 import math
 import sys
@@ -27,7 +29,13 @@ def from_token(t, lo, hi, bins):
 
 
 if __name__ == "__main__":
-    rows = list(csv.DictReader(open("data/e2e/Town03/labels.csv")))
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--data", default="data/e2e")
+    path = Path(ap.parse_args().data) / "Town03" / "labels.csv"
+    if not path.exists():
+        raise SystemExit(f"{path}가 없습니다. 08-2의 collect.py로 모으거나, "
+                         f"python scripts/download_samples.py --e2e-ref 후 --data data/e2e_ref로 실행하세요")
+    rows = list(csv.DictReader(open(path)))
     steer = np.array([float(r["steer"]) for r in rows])
     print(f"조향값 {len(steer)}개 (범위 -1 ~ 1, 1 = 70도)")
     for bins in [3, 15, 16, 255, 256]:
