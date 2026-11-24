@@ -1,8 +1,16 @@
 # self-driving-tutorial
 
+<img src="assets/self-driving-cover-900x1170.png" alt="자율주행 따라하기 책 표지" width="300" align="right">
+
 위키독스 책 『자율주행 따라하기 — Computer Vision에서 VLM·VLA 기반 Physical AI까지』의 예제 코드입니다.
 
-- 책: https://wikidocs.net/book/21521
+**책 구매**
+
+- [YES24](https://www.yes24.com/product/goods/197979719)
+- [교보문고](https://ebook-product.kyobobook.co.kr/dig/epd/ebook/E000013680693)
+- [위키독스](https://wikidocs.net/book/21521)
+
+<br clear="right">
 
 ## 빠른 시작
 
